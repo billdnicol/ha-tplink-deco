@@ -30,6 +30,7 @@ from .const import (
 from .coordinator import TpLinkDecoDataUpdateCoordinator
 from .data import TpLinkDecoData
 from .node_registration import TpLinkDecoNodeRegistration
+from .services import TpLinkDecoBlockService
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -52,6 +53,7 @@ async def async_setup_entry(
     integration = async_get_loaded_integration(hass, entry.domain)
 
     await TpLinkDecoCardRegistration(hass, str(integration.version)).async_register()
+    TpLinkDecoBlockService(hass).async_register()
 
     scan_interval = int(
         entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_SECONDS)
@@ -135,6 +137,7 @@ async def async_remove_entry(
         return
     integration = async_get_loaded_integration(hass, entry.domain)
     await TpLinkDecoCardRegistration(hass, str(integration.version)).async_remove()
+    TpLinkDecoBlockService(hass).async_unregister()
 
 
 async def async_reload_entry(

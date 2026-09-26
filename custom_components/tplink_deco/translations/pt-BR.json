@@ -55,6 +55,22 @@
             }
         }
     },
+    "services": {
+        "set_client_blocked": {
+            "name": "Definir cliente bloqueado",
+            "description": "Bloqueia ou desbloqueia um dispositivo cliente na rede Deco pelo endereço MAC, a mesma ação da Lista de Bloqueio no aplicativo Deco.",
+            "fields": {
+                "mac": {
+                    "name": "Endereço MAC",
+                    "description": "O endereço MAC do dispositivo a ser bloqueado ou desbloqueado."
+                },
+                "blocked": {
+                    "name": "Bloqueado",
+                    "description": "Verdadeiro para bloquear o acesso à rede do dispositivo, falso para restaurá-lo."
+                }
+            }
+        }
+    },
     "config": {
         "step": {
             "user": {

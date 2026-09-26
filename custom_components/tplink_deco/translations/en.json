@@ -55,6 +55,22 @@
             }
         }
     },
+    "services": {
+        "set_client_blocked": {
+            "name": "Set client blocked",
+            "description": "Blocks or unblocks a client device on the Deco network by MAC address, the same action as the Block List in the Deco app.",
+            "fields": {
+                "mac": {
+                    "name": "MAC address",
+                    "description": "The MAC address of the device to block or unblock."
+                },
+                "blocked": {
+                    "name": "Blocked",
+                    "description": "True to block the device's network access, false to restore it."
+                }
+            }
+        }
+    },
     "config": {
         "step": {
             "user": {

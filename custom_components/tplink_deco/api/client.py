@@ -23,6 +23,9 @@ from .snapshot import TpLinkDecoSnapshot
 
 SESSION_REJECTED_STATUS_CODES = frozenset({401, 403})
 
+_BLOCK_PATH = "admin/client"
+_BLOCK_FORM = "block"
+
 
 class TpLinkDecoApiClient:
     """TP-Link Deco API client."""
@@ -71,6 +74,32 @@ class TpLinkDecoApiClient:
             LOGGER.debug("Router rejected the open session, logging in again")
             return self._fetch(self._login())
 
+    def set_client_blocked(self, mac: str, *, blocked: bool) -> None:
+        """
+        Block or unblock ``mac``, reusing the open session like :meth:`get_snapshot`.
+
+        Calls the router's ``admin/client?form=block`` write operation directly
+        via :meth:`DecoClient.request` — the same action the Deco app's Block
+        List uses — since the installed SDK version does not yet expose a
+        typed convenience method for it.
+        """
+        with self._lock:
+            try:
+                self._set_client_blocked_reusing_session(mac, blocked=blocked)
+            except (DecoError, OSError) as exception:
+                self._session = None
+                raise self._wrap(exception) from exception
+
+    def _set_client_blocked_reusing_session(self, mac: str, *, blocked: bool) -> None:
+        session = self._session if self._session is not None else self._login()
+        try:
+            _request_block(session, mac, blocked=blocked)
+        except DecoError as exception:
+            if not _is_session_rejected(exception):
+                raise
+            LOGGER.debug("Router rejected the open session, logging in again")
+            _request_block(self._login(), mac, blocked=blocked)
+
     def _login(self) -> DecoClient:
         """Open a router session and keep it for the following fetches."""
         session = DecoClient(
@@ -107,6 +136,15 @@ class TpLinkDecoApiClient:
                 f"Failed to communicate with the router: {exception}"
             )
         return TpLinkDecoApiClientError(f"Failed to query the router: {exception}")
+
+
+def _request_block(session: DecoClient, mac: str, *, blocked: bool) -> None:
+    """Send the block/unblock write request over an already-open session."""
+    session.request(
+        _BLOCK_PATH,
+        _BLOCK_FORM,
+        {"operation": "write", "params": {"mac": mac, "enable": blocked}},
+    )
 
 
 def _is_session_rejected(exception: DecoError) -> bool:

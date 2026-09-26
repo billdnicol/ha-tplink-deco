@@ -1,0 +1,12 @@
+set_client_blocked:
+  fields:
+    mac:
+      required: true
+      example: "AA:BB:CC:DD:EE:FF"
+      selector:
+        text:
+    blocked:
+      required: true
+      example: true
+      selector:
+        boolean:

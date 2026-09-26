@@ -172,6 +172,61 @@ def test_get_snapshot_socket_timeout() -> None:
             client.get_snapshot()
 
 
+def test_set_client_blocked_sends_write_request() -> None:
+    """Blocking a client sends the write form with the expected params."""
+    session = _session()
+    with _patch(_factory(session)):
+        client = TpLinkDecoApiClient("host", "user", "pass")
+        client.set_client_blocked("AA:BB:CC:DD:EE:FF", blocked=True)
+    session.request.assert_called_once_with(
+        "admin/client",
+        "block",
+        {"operation": "write", "params": {"mac": "AA:BB:CC:DD:EE:FF", "enable": True}},
+    )
+
+
+def test_set_client_blocked_reuses_session_across_calls() -> None:
+    """Consecutive block calls share one session instead of logging in again."""
+    session = _session()
+    factory = _factory(session)
+    with _patch(factory):
+        client = TpLinkDecoApiClient("host", "user", "pass")
+        client.set_client_blocked("AA:BB:CC:DD:EE:FF", blocked=True)
+        client.set_client_blocked("AA:BB:CC:DD:EE:FF", blocked=False)
+    assert factory.call_count == 1
+    assert session.login.call_count == 1
+    assert session.request.call_count == 2
+
+
+def test_set_client_blocked_rejected_session_is_renewed_once() -> None:
+    """A session the router dropped is replaced and the block request retried."""
+    dropped = _session()
+    dropped.request.side_effect = ApiError(-40401)
+    renewed = _session()
+    factory = _factory(dropped, renewed)
+    with _patch(factory):
+        client = TpLinkDecoApiClient("host", "user", "pass")
+        client.set_client_blocked("AA:BB:CC:DD:EE:FF", blocked=True)
+    assert factory.call_count == 2
+    renewed.request.assert_called_once_with(
+        "admin/client",
+        "block",
+        {"operation": "write", "params": {"mac": "AA:BB:CC:DD:EE:FF", "enable": True}},
+    )
+
+
+def test_set_client_blocked_server_error_is_not_retried() -> None:
+    """A failure unrelated to the session is reported without logging in again."""
+    session = _session()
+    session.request.side_effect = TransportError("boom", status_code=500)
+    factory = _factory(session)
+    with _patch(factory):
+        client = TpLinkDecoApiClient("host", "user", "pass")
+        with pytest.raises(TpLinkDecoApiClientCommunicationError):
+            client.set_client_blocked("AA:BB:CC:DD:EE:FF", blocked=True)
+    assert factory.call_count == 1
+
+
 def test_get_snapshot_generic_deco_error() -> None:
     """Other DecoError subclasses are wrapped as the base error."""
     session = _session()
